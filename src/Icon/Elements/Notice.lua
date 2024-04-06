@@ -1,5 +1,8 @@
-return function(icon, Icon)
+--!strict
 
+local Typing = require(script.Parent.Parent.Typing)
+
+return function(icon: Typing.Icon, Icon: Typing.StaticIcon): Frame
 	local notice = Instance.new("Frame")
 	notice.Name = "Notice"
 	notice.ZIndex = 25
@@ -34,21 +37,20 @@ return function(icon, Icon)
 	noticeLabel.TextWrap = true
 	noticeLabel.Font = Enum.Font.Arial
 	noticeLabel.Parent = notice
-	
+
 	local iconModule = script.Parent.Parent
 	local packages = iconModule.Packages
 	local Janitor = require(packages.Janitor)
 	local Signal = require(packages.GoodSignal)
 	local Utility = require(iconModule.Utility)
 	icon.noticeChanged:Connect(function(totalNotices)
-
 		-- Notice amount
 		if not totalNotices then
 			return
 		end
 		local exceeded99 = totalNotices > 99
 		local noticeDisplay = (exceeded99 and "99+") or totalNotices
-		noticeLabel.Text = noticeDisplay
+		noticeLabel.Text = tostring(noticeDisplay)
 		if exceeded99 then
 			noticeLabel.TextSize = 11
 		end
@@ -66,10 +68,8 @@ return function(icon, Icon)
 			enabled = false
 		end
 		Utility.setVisible(notice, enabled, "NoticeHandler")
-
 	end)
 	icon.noticeStarted:Connect(function(customClearSignal, noticeId)
-	
 		if not customClearSignal then
 			customClearSignal = icon.deselected
 		end
@@ -77,7 +77,7 @@ return function(icon, Icon)
 		if parentIcon then
 			parentIcon:notify(customClearSignal)
 		end
-		
+
 		local noticeJanitor = icon.janitor:add(Janitor.new())
 		local noticeComplete = noticeJanitor:add(Signal.new())
 		noticeJanitor:add(icon.endNotices:Connect(function()
@@ -91,7 +91,6 @@ return function(icon, Icon)
 			completeSignal = noticeComplete,
 			clearNoticeEvent = customClearSignal,
 		}
-		local noticeLabel = icon:getInstance("NoticeLabel")
 		local function updateNotice()
 			icon.noticeChanged:Fire(icon.totalNotices)
 		end
@@ -105,10 +104,10 @@ return function(icon, Icon)
 			updateNotice()
 		end)
 	end)
-	
+
 	-- Establish the notice
 	notice:SetAttribute("ClipToJoinedParent", true)
 	icon:clipOutside(notice)
-	
+
 	return notice
 end

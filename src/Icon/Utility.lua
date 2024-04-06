@@ -1,16 +1,20 @@
+--!strict
+
 -- Just generic utility functions which I use and repeat across all my projects
 
+local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
 
+local Typing = require(script.Parent.Typing)
+
+local Janitor = require(script.Parent.Packages.Janitor) :: Typing.Janitor
 
 -- LOCAL
 local Utility = {}
-local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
 
-
-
 -- FUNCTIONS
-function Utility.createStagger(delayTime, callback, delayInitially)
+function Utility.createStagger<A...>(delayTime: number?, callback: (A...) -> (), delayInitially: number?): (A...) -> ()
 	-- This creates and returns a function which when called
 	-- acts identically to callback, however will only be called
 	-- for a maximum of once per delayTime. If the returned function
@@ -52,50 +56,136 @@ function Utility.createStagger(delayTime, callback, delayInitially)
 	return staggeredCallback
 end
 
-function Utility.round(n)
+function Utility.round(n: number): number
 	-- Credit to Darkmist101 for this
 	return math.floor(n + 0.5)
 end
 
-function Utility.reverseTable(t)
-	for i = 1, math.floor(#t/2) do
+function Utility.reverseTable<T>(t: { T }): ()
+	assert(type(t) == "table", "First argument must be a table")
+
+	for i = 1, math.floor(#t / 2) do
 		local j = #t - i + 1
 		t[i], t[j] = t[j], t[i]
 	end
 end
 
-function Utility.copyTable(t)
-	-- Credit to Stephen Leitnick (September 13, 2017) for this function from TableUtil
+function Utility.copyTable<T>(t: { T }): { T }
 	assert(type(t) == "table", "First argument must be a table")
-	local tCopy = table.create(#t)
-	for k,v in pairs(t) do
-		if (type(v) == "table") then
-			tCopy[k] = Utility.copyTable(v)
+
+	local tCopy: { T } = {}
+
+	for k, v in t do
+		if type(v) == "table" then
+			tCopy[k] = Utility.copyTable(v) :: any
 		else
-			tCopy[k] = v
+			tCopy[k] = v :: any
 		end
 	end
-	return tCopy
+
+	return (tCopy :: any) :: { T }
 end
 
-local validCharacters = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","1","2","3","4","5","6","7","8","9","0","<",">","?","@","{","}","[","]","!","(",")","=","+","~","#"}
-function Utility.generateUID(length)
-	length = length or 8
+local validCharacters = {
+	"a",
+	"b",
+	"c",
+	"d",
+	"e",
+	"f",
+	"g",
+	"h",
+	"i",
+	"j",
+	"k",
+	"l",
+	"m",
+	"n",
+	"o",
+	"p",
+	"q",
+	"r",
+	"s",
+	"t",
+	"u",
+	"v",
+	"w",
+	"x",
+	"y",
+	"z",
+	"A",
+	"B",
+	"C",
+	"D",
+	"E",
+	"F",
+	"G",
+	"H",
+	"I",
+	"J",
+	"K",
+	"L",
+	"M",
+	"N",
+	"O",
+	"P",
+	"Q",
+	"R",
+	"S",
+	"T",
+	"U",
+	"V",
+	"W",
+	"X",
+	"Y",
+	"Z",
+	"1",
+	"2",
+	"3",
+	"4",
+	"5",
+	"6",
+	"7",
+	"8",
+	"9",
+	"0",
+	"<",
+	">",
+	"?",
+	"@",
+	"{",
+	"}",
+	"[",
+	"]",
+	"!",
+	"(",
+	")",
+	"=",
+	"+",
+	"~",
+	"#",
+}
+
+local RNG = Random.new()
+
+function Utility.generateUID(length: number?): string
 	local UID = ""
 	local list = validCharacters
 	local total = #list
-	for i = 1, length do
-		local randomCharacter = list[math.random(1, total)]
-		UID = UID..randomCharacter
+
+	for _ = 1, length or 8 do
+		local randomCharacter = list[RNG:NextInteger(1, total)]
+		UID = `{UID}{randomCharacter}`
 	end
+
 	return UID
 end
 
-local instanceTrackers = {}
-function Utility.setVisible(instance, bool, sourceUID)
+local instanceTrackers: { [GuiObject]: { [string]: boolean? } } = {}
+function Utility.setVisible(instance: GuiObject, bool: boolean, sourceUID: string): ()
 	-- This effectively works like a buff object but
 	-- incredibly simplified. It stacks false values
-	-- so that if there is more than more than, the 
+	-- so that if there is more than more than, the
 	-- instance remains hidden even if set visible true
 	local tracker = instanceTrackers[instance]
 	if not tracker then
@@ -105,26 +195,30 @@ function Utility.setVisible(instance, bool, sourceUID)
 			instanceTrackers[instance] = nil
 		end)
 	end
+
 	if not bool then
 		tracker[sourceUID] = true
 	else
 		tracker[sourceUID] = nil
 	end
+
 	local isVisible = bool
+
 	if bool then
-		for sourceUID, _ in pairs(tracker) do
+		for _, _ in tracker do
 			isVisible = false
 			break
 		end
 	end
+
 	instance.Visible = isVisible
 end
 
-function Utility.formatStateName(incomingStateName)
-	return string.upper(string.sub(incomingStateName, 1, 1))..string.lower(string.sub(incomingStateName, 2))
+function Utility.formatStateName(incomingStateName: string): string
+	return `{string.upper(string.sub(incomingStateName, 1, 1))}{string.lower(string.sub(incomingStateName, 2))}`
 end
 
-function Utility.localPlayerRespawned(callback)
+function Utility.localPlayerRespawned(callback: (Model) -> ()): ()
 	-- The client localscript may be located under a ScreenGui with ResetOnSpawn set to true
 	-- In these scenarios, traditional methods like CharacterAdded won't be called by the
 	-- time the localscript has been destroyed, therefore we listen for removing instead
@@ -134,29 +228,32 @@ function Utility.localPlayerRespawned(callback)
 	localPlayer.CharacterRemoving:Connect(callback)
 end
 
-function Utility.getClippedContainer(screenGui)
+function Utility.getClippedContainer(screenGui: ScreenGui): Folder
 	-- We always want clipped items to display in front hence
 	-- why we have this
-	local clippedContainer = screenGui:FindFirstChild("ClippedContainer")
+	local clippedContainer = screenGui:FindFirstChild("ClippedContainer") :: Folder?
+
 	if not clippedContainer then
-		clippedContainer = Instance.new("Folder")
-		clippedContainer.Name = "ClippedContainer"
-		clippedContainer.Parent = screenGui
+		clippedContainer = Instance.new("Folder"); -- TODO: roblox plz fix luau typing
+		((clippedContainer :: any) :: Folder).Name = "ClippedContainer";
+		((clippedContainer :: any) :: Folder).Parent = screenGui
 	end
-	return clippedContainer
+
+	return clippedContainer :: Folder
 end
 
-local Janitor = require(script.Parent.Packages.Janitor)
-local GuiService = game:GetService("GuiService")
-function Utility.clipOutside(icon, instance)
+function Utility.clipOutside(icon: Typing.Icon, instance: Frame): (Frame)
 	local cloneJanitor = icon.janitor:add(Janitor.new())
+
 	instance.Destroying:Once(function()
 		cloneJanitor:Destroy()
 	end)
+
 	icon.janitor:add(instance)
 
 	local originalParent = instance.Parent
-	local clone = cloneJanitor:add(Instance.new("Frame"))
+
+	local clone = cloneJanitor:add(Instance.new("Frame")) :: Frame
 	clone:SetAttribute("IsAClippedClone", true)
 	clone.Name = instance.Name
 	clone.AnchorPoint = instance.AnchorPoint
@@ -180,7 +277,9 @@ function Utility.clipOutside(icon, instance)
 	local screenGui
 	local function updateScreenGui()
 		local originalScreenGui = originalParent:FindFirstAncestorWhichIsA("ScreenGui")
-		screenGui = if string.match(originalScreenGui.Name, "Clipped") then originalScreenGui else originalScreenGui.Parent[originalScreenGui.Name.."Clipped"]
+		screenGui = if string.match(originalScreenGui.Name, "Clipped")
+			then originalScreenGui
+			else originalScreenGui.Parent[`{originalScreenGui.Name}Clipped`]
 		instance.AnchorPoint = Vector2.new(0, 0)
 		instance.Parent = Utility.getClippedContainer(screenGui)
 	end
@@ -188,7 +287,7 @@ function Utility.clipOutside(icon, instance)
 	updateScreenGui()
 
 	-- Lets copy over children that modify size
-	for _, child in pairs(instance:GetChildren()) do
+	for _, child in instance:GetChildren() do
 		if child:IsA("UIAspectRatioConstraint") then
 			child:Clone().Parent = clone
 		end
@@ -205,7 +304,7 @@ function Utility.clipOutside(icon, instance)
 			return
 		end
 		local isVisible = widget.Visible
-		
+
 		if isOutsideParent then
 			isVisible = false
 		end
@@ -225,7 +324,7 @@ function Utility.clipOutside(icon, instance)
 			local nextIconUID = ourUID
 			local shouldClipToParent = instance:GetAttribute("ClipToJoinedParent")
 			if shouldClipToParent then
-				for i = 1, 10 do -- This is safer than while true do and should never be > 4 parents
+				for _ = 1, 10 do -- This is safer than while true do and should never be > 4 parents
 					local nextIcon = Icon.getIconByUID(nextIconUID)
 					if not nextIcon then
 						break
@@ -244,7 +343,7 @@ function Utility.clipOutside(icon, instance)
 				return
 			end
 			local pos = instance.AbsolutePosition
-			local halfSize = instance.AbsoluteSize/2
+			local halfSize = instance.AbsoluteSize / 2
 			local parentPos = parentInstance.AbsolutePosition
 			local parentSize = parentInstance.AbsoluteSize
 			local posHalf = (pos + halfSize)
@@ -262,7 +361,7 @@ function Utility.clipOutside(icon, instance)
 				local connection = parentInstance:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(function()
 					checkIfOutsideParentXBounds()
 				end)
-				cloneJanitor:add(connection, "Disconnect", "TrackUtilityScroller-"..ourUID)
+				cloneJanitor:add(connection, "Disconnect", `TrackUtilityScroller-{ourUID}`)
 			end
 		end)
 	end
@@ -270,12 +369,11 @@ function Utility.clipOutside(icon, instance)
 	local camera = workspace.CurrentCamera
 	local additionalOffsetX = instance:GetAttribute("AdditionalOffsetX") or 0
 	local function trackProperty(property)
-		local absoluteProperty = "Absolute"..property
+		local absoluteProperty = `Absolute{property}`
 		local function updateProperty()
 			local cloneValue = clone[absoluteProperty]
 			local absoluteValue = UDim2.fromOffset(cloneValue.X, cloneValue.Y)
 			if property == "Position" then
-
 				-- This binds the instances within the bounds of the screen
 				local SIDE_PADDING = 4
 				local limitX = camera.ViewportSize.X - instance.AbsoluteSize.X - SIDE_PADDING
@@ -293,25 +391,23 @@ function Utility.clipOutside(icon, instance)
 				local viewportWidth = workspace.CurrentCamera.ViewportSize.X
 				local guiWidth = screenGui.AbsoluteSize.X
 				local guiOffset = screenGui.AbsolutePosition.X
-				local widthDifference = guiOffset - topbarInset.Min.X
-				local oldTopbarCenterOffset = 0--widthDifference/30 -- I have no idea why this works, it just does
+				local oldTopbarCenterOffset = 0 --widthDifference/30 -- I have no idea why this works, it just does
 				local offsetX = if icon.isOldTopbar then guiOffset else viewportWidth - guiWidth - oldTopbarCenterOffset
-				
+
 				-- Also add additionalOffset
 				offsetX -= additionalOffsetX
 				absoluteValue += UDim2.fromOffset(-offsetX, topbarInset.Height)
 
 				-- Finally check if within its direct parents bounds
 				checkIfOutsideParentXBounds()
-
 			end
 			instance[property] = absoluteValue
 		end
-		
+
 		-- This defer is essential as the listener may be in a different screenGui to the actor
 		local updatePropertyStaggered = Utility.createStagger(0.01, updateProperty)
 		cloneJanitor:add(clone:GetPropertyChangedSignal(absoluteProperty):Connect(updatePropertyStaggered))
-		
+
 		-- This is to patch a weirddddd bug with ScreenGuis with SreenInsets set to
 		-- 'TopbarSafeInsets'. For some reason the absolute position of gui instances
 		-- within this type of screenGui DO NOT accurately update to match their new
@@ -322,18 +418,11 @@ function Utility.clipOutside(icon, instance)
 		-- Here's a GIF of this bug: https://i.imgur.com/VitHdC1.gif
 		local updatePropertyPatch = Utility.createStagger(0.5, updateProperty, true)
 		cloneJanitor:add(clone:GetPropertyChangedSignal(absoluteProperty):Connect(updatePropertyPatch))
-		
 	end
 	task.delay(0.1, checkIfOutsideParentXBounds)
 	checkIfOutsideParentXBounds()
 	updateVisibility()
 	trackProperty("Position")
-	
-	-- Track visiblity changes
-	cloneJanitor:add(instance:GetPropertyChangedSignal("Visible"):Connect(function()
-		--print("Visiblity changed:", instance, clone, instance.Visible)
-		--clone.Visible = instance.Visible
-	end))
 
 	-- To ensure accurate positioning, it's important the clone also remains the same size as the instance
 	local shouldTrackCloneSize = instance:GetAttribute("TrackCloneSize")
@@ -349,8 +438,7 @@ function Utility.clipOutside(icon, instance)
 	return clone
 end
 
-function Utility.joinFeature(originalIcon, parentIcon, iconsArray, scrollingFrameOrFrame)
-
+function Utility.joinFeature(originalIcon: Typing.Icon, parentIcon: Typing.Icon, iconsArray: { Typing.Icon }, scrollingFrameOrFrame: ScrollingFrame | Frame): ()
 	-- This is resonsible for moving the icon under a feature like a dropdown
 	local joinJanitor = originalIcon.joinJanitor
 	joinJanitor:clean()
@@ -369,8 +457,8 @@ function Utility.joinFeature(originalIcon, parentIcon, iconsArray, scrollingFram
 	end
 	joinJanitor:add(parentIcon.alignmentChanged:Connect(updateAlignent))
 	updateAlignent()
-	originalIcon:modifyTheme({"IconButton", "BackgroundTransparency", 1}, "JoinModification")
-	originalIcon:modifyTheme({"ClickRegion", "Active", false}, "JoinModification")
+	originalIcon:modifyTheme({ "IconButton", "BackgroundTransparency", 1 }, "JoinModification")
+	originalIcon:modifyTheme({ "ClickRegion", "Active", false }, "JoinModification")
 	if parentIcon.childModifications then
 		-- We defer so that the default values (such as dropdown
 		-- minimum width can be applied before any custom
@@ -409,7 +497,7 @@ function Utility.joinFeature(originalIcon, parentIcon, iconsArray, scrollingFram
 		if not joinedFrame then
 			return
 		end
-		for i, iconUID in pairs(iconsArray) do
+		for i, iconUID in iconsArray do
 			if iconUID == originalIconUID then
 				table.remove(iconsArray, i)
 				break
@@ -425,11 +513,11 @@ function Utility.joinFeature(originalIcon, parentIcon, iconsArray, scrollingFram
 		originalIcon.joinedFrame = false
 		originalIcon:setBehaviour("IconButton", "BackgroundTransparency", nil, true)
 		originalIcon:removeModification("JoinModification")
-		
+
 		local parentHasNoChildren = true
 		local parentChildIcons = parentIcon.childIconsDict
 		parentChildIcons[originalIconUID] = nil
-		for childIconUID, _ in pairs(parentChildIcons) do
+		for _, _ in parentChildIcons do
 			parentHasNoChildren = false
 			break
 		end
@@ -437,11 +525,7 @@ function Utility.joinFeature(originalIcon, parentIcon, iconsArray, scrollingFram
 			parentIcon:setEnabled(false)
 		end
 		updateAlignent()
-
 	end)
-
 end
-
-
 
 return Utility
